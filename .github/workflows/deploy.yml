@@ -4,6 +4,7 @@ on:
   repository_dispatch:
     types: [deploy-app]
 
+  # Doar pentru test manual din GitHub Actions
   workflow_dispatch:
     inputs:
       repo:
@@ -11,41 +12,34 @@ on:
         required: true
         type: string
 
+concurrency:
+  group: central-pages-deploy
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     env:
-      OWNER: danielssoft
+      OWNER: danielsssoft
       TARGET_REPO: ${{ github.event.client_payload.repo || inputs.repo }}
 
     steps:
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
       - name: Validate repository name
+        shell: bash
         run: |
           if [[ ! "$TARGET_REPO" =~ ^[A-Za-z0-9._-]+$ ]]; then
             echo "Invalid repository name: $TARGET_REPO"
             exit 1
           fi
 
-      - name: Check deploy topic
-        env:
-          GH_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
-        run: |
-          topics=$(gh api \
-            "/repos/${OWNER}/${TARGET_REPO}/topics" \
-            --jq '.names[]' 2>/dev/null || true)
+          echo "Deploying repository: $TARGET_REPO"
 
-          if ! echo "$topics" | grep -qx "deploy"; then
-            echo "Repository '$TARGET_REPO' does not have topic 'deploy'."
-            exit 1
-          fi
+      # ==============================
+      # CLONE SOURCE APPLICATION
+      # ==============================
 
-      - name: Clone source repository from main
+      - name: Clone application from main
         env:
           GH_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
         run: |
@@ -54,6 +48,19 @@ jobs:
             --branch main \
             "https://x-access-token:${GH_TOKEN}@github.com/${OWNER}/${TARGET_REPO}.git" \
             /tmp/app
+
+      # ==============================
+      # NODE
+      # ==============================
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # ==============================
+      # INSTALL
+      # ==============================
 
       - name: Install dependencies
         working-directory: /tmp/app
@@ -73,35 +80,50 @@ jobs:
             npm install
           fi
 
-      - name: Build app
+      # ==============================
+      # BUILD
+      # ==============================
+
+      - name: Build application
         working-directory: /tmp/app
         run: |
           if grep -q '"vite"' package.json; then
-            echo "Building Vite project: ${TARGET_REPO}"
+
+            echo "Vite detected"
+            echo "Base URL: /${TARGET_REPO}/"
 
             npx vite build --base="/${TARGET_REPO}/"
+
           else
-            echo "Unsupported project type. Currently expecting Vite."
+            echo "Unsupported project type."
+            echo "Currently this deployer supports Vite projects."
             exit 1
           fi
 
-      - name: Verify build output
+      - name: Verify build
         run: |
           if [ ! -d /tmp/app/dist ]; then
-            echo "Build failed: dist directory not found."
+            echo "Build failed: dist folder does not exist."
             exit 1
           fi
+
+      # ==============================
+      # CLONE CENTRAL PAGES REPO
+      # ==============================
 
       - name: Clone GitHub Pages repository
         env:
           GH_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
         run: |
           git clone \
-            --depth 1 \
             "https://x-access-token:${GH_TOKEN}@github.com/${OWNER}/${OWNER}.github.io.git" \
             /tmp/pages
 
-      - name: Replace deployed app
+      # ==============================
+      # REPLACE ONLY THIS APP
+      # ==============================
+
+      - name: Deploy application files
         run: |
           rm -rf "/tmp/pages/${TARGET_REPO}"
 
@@ -110,6 +132,10 @@ jobs:
           cp -r /tmp/app/dist/. "/tmp/pages/${TARGET_REPO}/"
 
           touch /tmp/pages/.nojekyll
+
+      # ==============================
+      # PUSH
+      # ==============================
 
       - name: Commit deployment
         working-directory: /tmp/pages
@@ -120,13 +146,10 @@ jobs:
           git add .
 
           if git diff --cached --quiet; then
-            echo "No deployment changes."
+            echo "Nothing changed."
             exit 0
           fi
 
           git commit -m "Deploy ${TARGET_REPO}"
 
-      - name: Push deployment
-        working-directory: /tmp/pages
-        run: |
           git push
