@@ -4,7 +4,6 @@ on:
   repository_dispatch:
     types: [deploy-app]
 
-  # Doar pentru test manual din GitHub Actions
   workflow_dispatch:
     inputs:
       repo:
@@ -19,6 +18,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: production
 
     env:
       OWNER: danielsssoft
@@ -33,11 +33,7 @@ jobs:
             exit 1
           fi
 
-          echo "Deploying repository: $TARGET_REPO"
-
-      # ==============================
-      # CLONE SOURCE APPLICATION
-      # ==============================
+          echo "Deploying: $TARGET_REPO"
 
       - name: Clone application from main
         env:
@@ -49,18 +45,10 @@ jobs:
             "https://x-access-token:${GH_TOKEN}@github.com/${OWNER}/${TARGET_REPO}.git" \
             /tmp/app
 
-      # ==============================
-      # NODE
-      # ==============================
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      # ==============================
-      # INSTALL
-      # ==============================
 
       - name: Install dependencies
         working-directory: /tmp/app
@@ -80,65 +68,48 @@ jobs:
             npm install
           fi
 
-      # ==============================
-      # BUILD
-      # ==============================
-
       - name: Build application
         working-directory: /tmp/app
         run: |
           if grep -q '"vite"' package.json; then
-
             echo "Vite detected"
-            echo "Base URL: /${TARGET_REPO}/"
+            echo "Base: /${TARGET_REPO}/"
 
             npx vite build --base="/${TARGET_REPO}/"
-
           else
-            echo "Unsupported project type."
-            echo "Currently this deployer supports Vite projects."
+            echo "Unsupported project type. Expected Vite."
             exit 1
           fi
 
       - name: Verify build
         run: |
           if [ ! -d /tmp/app/dist ]; then
-            echo "Build failed: dist folder does not exist."
+            echo "dist folder not found."
             exit 1
           fi
-
-      # ==============================
-      # CLONE CENTRAL PAGES REPO
-      # ==============================
 
       - name: Clone GitHub Pages repository
         env:
           GH_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
         run: |
           git clone \
+            --depth 1 \
             "https://x-access-token:${GH_TOKEN}@github.com/${OWNER}/${OWNER}.github.io.git" \
             /tmp/pages
 
-      # ==============================
-      # REPLACE ONLY THIS APP
-      # ==============================
-
-      - name: Deploy application files
+      - name: Replace deployed application
         run: |
           rm -rf "/tmp/pages/${TARGET_REPO}"
-
           mkdir -p "/tmp/pages/${TARGET_REPO}"
 
           cp -r /tmp/app/dist/. "/tmp/pages/${TARGET_REPO}/"
 
           touch /tmp/pages/.nojekyll
 
-      # ==============================
-      # PUSH
-      # ==============================
-
-      - name: Commit deployment
+      - name: Commit and push deployment
         working-directory: /tmp/pages
+        env:
+          GH_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
         run: |
           git config user.name "Auto Deployer"
           git config user.email "actions@github.com"
