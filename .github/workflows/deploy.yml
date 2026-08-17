@@ -21,7 +21,7 @@ jobs:
     environment: production
 
     env:
-      OWNER: danielsssoft
+      OWNER: danielssoft
       TARGET_REPO: ${{ github.event.client_payload.repo || inputs.repo }}
 
     steps:
