@@ -22,6 +22,7 @@ jobs:
 
     env:
       OWNER: danielssoft
+      CENTRAL_REPO: testing
       TARGET_REPO: ${{ github.event.client_payload.repo || inputs.repo }}
 
     steps:
@@ -56,14 +57,11 @@ jobs:
           if [ -f pnpm-lock.yaml ]; then
             corepack enable
             pnpm install --frozen-lockfile
-
           elif [ -f yarn.lock ]; then
             corepack enable
             yarn install --frozen-lockfile
-
           elif [ -f package-lock.json ]; then
             npm ci
-
           else
             npm install
           fi
@@ -73,9 +71,10 @@ jobs:
         run: |
           if grep -q '"vite"' package.json; then
             echo "Vite detected"
-            echo "Base: /${TARGET_REPO}/"
+            echo "Base: /${CENTRAL_REPO}/${TARGET_REPO}/"
 
-            npx vite build --base="/${TARGET_REPO}/"
+            npx vite build \
+              --base="/${CENTRAL_REPO}/${TARGET_REPO}/"
           else
             echo "Unsupported project type. Expected Vite."
             exit 1
@@ -88,28 +87,37 @@ jobs:
             exit 1
           fi
 
-      - name: Clone GitHub Pages repository
+      - name: Clone central repository
         env:
           GH_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
         run: |
           git clone \
-            --depth 1 \
-            "https://x-access-token:${GH_TOKEN}@github.com/${OWNER}/${OWNER}.github.io.git" \
+            "https://x-access-token:${GH_TOKEN}@github.com/${OWNER}/${CENTRAL_REPO}.git" \
             /tmp/pages
 
-      - name: Replace deployed application
-        run: |
-          rm -rf "/tmp/pages/${TARGET_REPO}"
-          mkdir -p "/tmp/pages/${TARGET_REPO}"
-
-          cp -r /tmp/app/dist/. "/tmp/pages/${TARGET_REPO}/"
-
-          touch /tmp/pages/.nojekyll
-
-      - name: Commit and push deployment
+      - name: Prepare gh-pages branch
         working-directory: /tmp/pages
-        env:
-          GH_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        run: |
+          if git ls-remote --exit-code --heads origin gh-pages; then
+            git fetch origin gh-pages
+            git checkout gh-pages
+          else
+            git checkout --orphan gh-pages
+            git rm -rf . || true
+          fi
+
+      - name: Deploy application
+        working-directory: /tmp/pages
+        run: |
+          rm -rf "${TARGET_REPO}"
+          mkdir -p "${TARGET_REPO}"
+
+          cp -r /tmp/app/dist/. "${TARGET_REPO}/"
+
+          touch .nojekyll
+
+      - name: Commit and push gh-pages
+        working-directory: /tmp/pages
         run: |
           git config user.name "Auto Deployer"
           git config user.email "actions@github.com"
@@ -123,4 +131,4 @@ jobs:
 
           git commit -m "Deploy ${TARGET_REPO}"
 
-          git push
+          git push origin gh-pages
