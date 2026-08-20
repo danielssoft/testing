@@ -15,8 +15,16 @@ const CACHE = 'cmshot-v1';
 // Only these are worth keeping. Everything else goes straight to the network.
 const CACHEABLE = /\.(?:js|css|html|svg|png|woff2?)$/;
 
+/**
+ * The game is often hosted under a sub-path — `/testing/cmshot-battle/` — so
+ * nothing here may be written against the domain root. The registration scope
+ * is the app's own base, and every path is resolved against it.
+ */
+const BASE = new URL('./', self.registration.scope).pathname;
+const SHELL = `${BASE}index.html`;
+
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(['/', '/index.html'])).catch(() => undefined));
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll([BASE, SHELL])).catch(() => undefined));
   self.skipWaiting();
 });
 
@@ -35,7 +43,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
   // Live endpoints must never be served from a cache.
-  if (url.pathname.startsWith('/api') || url.pathname.startsWith('/ws')) return;
+  if (url.pathname.startsWith(`${BASE}api`) || url.pathname.startsWith(`${BASE}ws`)) return;
 
   const isDocument = req.mode === 'navigate';
   if (!isDocument && !CACHEABLE.test(url.pathname)) return;
@@ -54,7 +62,7 @@ self.addEventListener('fetch', (event) => {
       // Offline: the cached copy is the whole point.
       if (hit) return hit;
       if (isDocument) {
-        const shell = await cache.match('/index.html');
+        const shell = await cache.match(SHELL);
         if (shell) return shell;
       }
       throw err;
