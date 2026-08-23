@@ -2,14 +2,21 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- `user-scalable=no` because a double-tap on the fire button would
+         otherwise zoom the whole game to 200%, and `viewport-fit=cover`
+         so the controls can be positioned against the real screen edge
+         through the safe-area insets rather than a letterbox. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="theme-color" content="#0b0d12" />
     <meta name="description" content="CMSHOT BATTLE — a fast, browser-based 3D multiplayer arena shooter." />
     <title>CMSHOT BATTLE 2</title>
     <link rel="icon" href="/testing/cmshot-battle/favicon.svg" type="image/svg+xml" />
-    <script type="module" crossorigin src="/testing/cmshot-battle/assets/index-gpiCGNVO.js"></script>
+    <script type="module" crossorigin src="/testing/cmshot-battle/assets/index-CIZJTxR-.js"></script>
     <link rel="modulepreload" crossorigin href="/testing/cmshot-battle/assets/three-Q2JCR-ke.js">
-    <link rel="stylesheet" crossorigin href="/testing/cmshot-battle/assets/index-DbeVj8eS.css">
+    <link rel="stylesheet" crossorigin href="/testing/cmshot-battle/assets/index-CoRM7fvh.css">
   </head>
   <body>
     <div id="app">
