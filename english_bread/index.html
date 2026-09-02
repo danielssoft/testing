@@ -3,16 +3,25 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- Pinch zoom is off on purpose. The layout is one column at the width of
+         the screen, so zooming does not reveal anything — it only makes the
+         page wider than the viewport, and then every swipe on a card fights a
+         horizontal scroll. Text can still be enlarged where it matters: the OS
+         font-size setting still applies, because nothing here pins a text size
+         against it. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
     <!-- The dark --background from src/styles.css. Not media-switched: the app
          defaults to dark whatever the system preference is. -->
     <meta name="theme-color" content="#09090b" />
     <meta name="description" content="English grammar trainer" />
     <title>English Bread | For u</title>
-    <script type="module" crossorigin src="/testing/english_bread/assets/index-C5wzh20U.js"></script>
-    <link rel="modulepreload" crossorigin href="/testing/english_bread/assets/vendor-S_bIN3MF.js">
+    <script type="module" crossorigin src="/testing/english_bread/assets/index-cBmouys8.js"></script>
+    <link rel="modulepreload" crossorigin href="/testing/english_bread/assets/vendor-D5rWuwZI.js">
     <link rel="modulepreload" crossorigin href="/testing/english_bread/assets/content-CMrPjD21.js">
-    <link rel="stylesheet" crossorigin href="/testing/english_bread/assets/index-fPZ5JLwD.css">
+    <link rel="stylesheet" crossorigin href="/testing/english_bread/assets/index-CsuVMljq.css">
   <link rel="manifest" href="/testing/english_bread/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/testing/english_bread/registerSW.js"></script></head>
   <body>
     <div id="root"></div>
